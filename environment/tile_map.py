@@ -1,12 +1,12 @@
 import pygame
 
-from tile import Tile
-from tile_type import TileType  
-from search import SearchStatus
-from step_colors import AGENT_COLOR, tile_color
+from environment.tile import Tile
+from environment.tile_type import TileType  
+from search.algorithms import SearchStatus
+from visualization.step_colors import AGENT_COLOR, tile_color
 
 PADDING = 20  
-MAX_TILE_SIZE = 40  
+MAX_TILE_SIZE = 80   #lets the grid grow when the window is enlarged
 
 
 class TileMap:

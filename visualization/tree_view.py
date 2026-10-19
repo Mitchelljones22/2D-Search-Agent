@@ -3,12 +3,13 @@ import pygame
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 from matplotlib.figure import Figure
 
-from search import SearchStatus
-from search_report import stats_list
-from step_colors import PATH_COLOR, tile_color
+from search.algorithms import SearchStatus
+from visualization.search_report import stats_list
+from visualization.step_colors import PATH_COLOR, tile_color
 
 DPI = 100
 CURRENT_OUTLINE = (170, 120, 0)   #dark gold ring marks the agent's node
+MIN_SIZE = (300, 200)
 
 
 def _rgb(color):  #pygame 0-255 color to matplotlib 0-1 color
@@ -50,18 +51,21 @@ class TreeView:
     def __init__(self, width, height):
         self.width = width
         self.height = height
-        self.window = pygame.Window("Search Tree", (width, height))
+        self.window = pygame.Window("Search Tree", (width, height), resizable=True)
+        self.window.minimum_size = MIN_SIZE
         self.surface = self.window.get_surface()
         self.image = None
+        self._last_render = (None, None, "", "")   #redrawn at the new size when the window is resized
 
-    def render(self, tree, step=None, search_name=""):  #Call only when the tree changes; step limits it to that point in the search
+    def render(self, tree, step=None, search_name="", message=""):  #Call only when the tree changes; step limits it to that point in the search
+        self._last_render = (tree, step, search_name, message)
         figure = Figure(figsize=(self.width / DPI, self.height / DPI), dpi=DPI)
         canvas = FigureCanvasAgg(figure)
         axes = figure.add_axes([0, 0, 1, 1])
         axes.axis("off")
 
         if tree is None:
-            axes.text(0.5, 0.5, "Place a Start tile", ha="center", va="center")
+            axes.text(0.5, 0.5, message, ha="center", va="center", fontsize=12, color="#555555")
         else:
             self._draw_tree(axes, tree, step)
             if step is not None:
@@ -124,7 +128,17 @@ class TreeView:
             bbox={"facecolor": "white", "alpha": 0.85, "edgecolor": "#bbbbbb"},
         )
 
+    def _fit_window(self):  #matplotlib draws at a fixed pixel size, so re-render after a resize
+        width, height = self.window.size
+        if (width, height) == (self.width, self.height):
+            return
+        self.width = width
+        self.height = height
+        self.surface = self.window.get_surface()   #the old surface is invalid after a resize
+        self.render(*self._last_render)
+
     def draw(self):
+        self._fit_window()
         self.surface.fill((255, 255, 255))
         if self.image is not None:
             self.surface.blit(self.image, (0, 0))

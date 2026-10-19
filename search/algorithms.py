@@ -10,7 +10,7 @@ from collections import deque
 from dataclasses import dataclass
 from enum import Enum
 
-from tree import SearchTree
+from search.tree import SearchTree
 
 
 class SearchStatus(Enum):

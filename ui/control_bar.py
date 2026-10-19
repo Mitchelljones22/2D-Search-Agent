@@ -2,10 +2,17 @@ from enum import Enum
 
 import pygame
 
+from ui.action_button import ActionButton
+
 BAR_HEIGHT = 70
 BUTTON_SIZE = 44
 BUTTON_GAP = 12
 STOP_GAP = 32   #extra space so Stop sits apart from the playback buttons
+SPEEDS = (1, 2, 5)   #playback multipliers, 1x is the base speed
+SPEED_WIDTH = 36
+SPEED_HEIGHT = 32
+SPEED_GAP = 4
+SPEED_GROUP_GAP = 24   #space between the speed buttons and the playback buttons
 
 ENABLED_FILL = (70, 70, 70)
 DISABLED_FILL = (45, 45, 45)
@@ -84,18 +91,30 @@ class ControlBar:  #playback controls centered under the grid
     ACTION_STOP = "stop"
 
     def __init__(self, area):
+        self.back_button = IconButton("left", (0, 0, BUTTON_SIZE, BUTTON_SIZE))
+        self.play_button = IconButton("play", (0, 0, BUTTON_SIZE, BUTTON_SIZE))
+        self.forward_button = IconButton("right", (0, 0, BUTTON_SIZE, BUTTON_SIZE))
+        self.stop_button = IconButton("stop", (0, 0, BUTTON_SIZE, BUTTON_SIZE))
+        self.speed_font = pygame.font.Font(None, 24)
+        self.speed_buttons = [ActionButton(f"{speed}x", (0, 0, SPEED_WIDTH, SPEED_HEIGHT)) for speed in SPEEDS]
+        self.speed = SPEEDS[0]
+        self.set_area(area)
+
+    def set_area(self, area):  #re-centers the buttons, call when the window is resized
         self.area = pygame.Rect(area)
         trio_width = 3 * BUTTON_SIZE + 2 * BUTTON_GAP
         left = self.area.centerx - trio_width // 2
         top = self.area.centery - BUTTON_SIZE // 2
+        self.back_button.rect.topleft = (left, top)
+        self.play_button.rect.topleft = (left + BUTTON_SIZE + BUTTON_GAP, top)
+        self.forward_button.rect.topleft = (left + 2 * (BUTTON_SIZE + BUTTON_GAP), top)
+        self.stop_button.rect.topleft = (left + trio_width + STOP_GAP, top)
 
-        def slot(x):
-            return (x, top, BUTTON_SIZE, BUTTON_SIZE)
-
-        self.back_button = IconButton("left", slot(left))
-        self.play_button = IconButton("play", slot(left + BUTTON_SIZE + BUTTON_GAP))
-        self.forward_button = IconButton("right", slot(left + 2 * (BUTTON_SIZE + BUTTON_GAP)))
-        self.stop_button = IconButton("stop", slot(left + trio_width + STOP_GAP))
+        speeds_width = len(SPEEDS) * SPEED_WIDTH + (len(SPEEDS) - 1) * SPEED_GAP
+        speed_left = left - SPEED_GROUP_GAP - speeds_width
+        speed_top = self.area.centery - SPEED_HEIGHT // 2
+        for index, button in enumerate(self.speed_buttons):
+            button.rect.topleft = (speed_left + index * (SPEED_WIDTH + SPEED_GAP), speed_top)
 
     @staticmethod
     def _steps_enabled(state):  #stepping only makes sense while paused
@@ -108,6 +127,10 @@ class ControlBar:  #playback controls centered under the grid
     def handle_event(self, event, state):
         if event.type != pygame.MOUSEBUTTONDOWN or event.button != 1:
             return None
+        for speed, button in zip(SPEEDS, self.speed_buttons):   #speed can change at any time, even while playing
+            if button.is_clicked(event.pos):
+                self.speed = speed
+                return None
         if self.play_button.is_clicked(event.pos):
             if state == PlayState.PLAYING:
                 return self.ACTION_PAUSE
@@ -130,3 +153,5 @@ class ControlBar:  #playback controls centered under the grid
             self.play_button.draw(surface, True, "play")
         self.forward_button.draw(surface, steps_enabled)
         self.stop_button.draw(surface, self._stop_enabled(state))
+        for speed, button in zip(SPEEDS, self.speed_buttons):
+            button.draw(surface, self.speed_font, speed == self.speed)

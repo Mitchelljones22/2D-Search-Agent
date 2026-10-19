@@ -1,6 +1,6 @@
 import pygame
 
-from tile_type import TILE_COLORS, TILE_LABELS  
+from environment.tile_type import TILE_COLORS, TILE_LABELS  
 
 
 class Button:

@@ -1,4 +1,4 @@
-from tile_type import TileType, TILE_COLORS  
+from environment.tile_type import TileType, TILE_COLORS  
 
 
 class Tile:

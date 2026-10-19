@@ -1,9 +1,9 @@
 import pygame
 
-from action_button import ActionButton
-from button import Button
-from textbox import TextBox
-from tile_type import TileType
+from ui.action_button import ActionButton
+from ui.button import Button
+from ui.textbox import TextBox
+from environment.tile_type import TileType
 
 
 class Sidebar:
@@ -12,6 +12,7 @@ class Sidebar:
     MIN_GRID_SIZE = 2   #smallest grid that fits both a Start and a Goal
     MAX_GRID_SIZE = 30  
     MAX_DENSITY_PERCENT = 100  
+    MIN_HEIGHT = 590   #seed row is pinned to the bottom, this keeps it below the Search buttons
 
     def __init__(self, width, height, seed_max_length, cols, rows, density_percent):  
         self.width = width
@@ -47,15 +48,17 @@ class Sidebar:
             ActionButton("DFS", (20 + half_width + gap, 428, half_width, 36)),
         ]
 
-        seed_row_y = height - 120
-        self.seed_box = TextBox((20, seed_row_y, box_width, 40), self.seed_font, seed_max_length)
-        self.generate_button = ActionButton(
-            "Generate",
-            (20 + box_width + gap, seed_row_y, content_width - box_width - gap, 40),
-        )
-        self.new_seed_button = ActionButton("New Seed", (20, height - 60, content_width, 40))
+        self.seed_box = TextBox((20, 0, box_width, 40), self.seed_font, seed_max_length)
+        self.generate_button = ActionButton("Generate", (20 + box_width + gap, 0, content_width - box_width - gap, 40))
+        self.new_seed_button = ActionButton("New Seed", (20, 0, content_width, 40))
+        self.resize(height)
 
-        self.lock_overlay = pygame.Surface((width, height), pygame.SRCALPHA)
+    def resize(self, height):  #keeps the seed row and New Seed pinned to the bottom of the window
+        self.height = max(height, self.MIN_HEIGHT)
+        self.seed_box.rect.y = self.height - 120
+        self.generate_button.rect.y = self.height - 120
+        self.new_seed_button.rect.y = self.height - 60
+        self.lock_overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         self.lock_overlay.fill((30, 30, 30, 170))
 
     def set_seed(self, seed):

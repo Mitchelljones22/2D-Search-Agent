@@ -3,7 +3,7 @@
 The history lets the user step backwards and forwards through a search that has
 already happened, while new steps are only pulled from the search when needed.
 """
-from search import SearchStatus, bfs
+from search.algorithms import SearchStatus, bfs
 
 
 class SearchAgent:

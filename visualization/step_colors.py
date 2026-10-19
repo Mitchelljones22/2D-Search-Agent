@@ -1,6 +1,6 @@
 """Colors for drawing a search in progress, shared by the grid and the tree view."""
-from search import SearchStatus
-from tile_type import TileType
+from search.algorithms import SearchStatus
+from environment.tile_type import TileType
 
 AGENT_COLOR = (255, 220, 0)      #tile the search agent is currently on
 FRONTIER_COLOR = (150, 205, 255)  #discovered, waiting to be expanded

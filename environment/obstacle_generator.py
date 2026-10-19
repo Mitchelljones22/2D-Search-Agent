@@ -1,6 +1,6 @@
 import random
 
-from tile_type import TileType  
+from environment.tile_type import TileType  
 
 #Seeds allow for reproducibility
 class ObstacleGenerator:  #No Reachability cheack (Some mazes will be unsolvable)

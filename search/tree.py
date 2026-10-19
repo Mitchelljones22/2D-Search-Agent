@@ -1,7 +1,4 @@
-from collections import deque
-
-
-class SearchTree:  
+class SearchTree:  #inverted tree rooted at Start, grown by the search through add_child
     def __init__(self, root):  
         self.root = root  
         self.parent = {root: None}  
@@ -34,17 +31,3 @@ class SearchTree:
             node = self.parent[node]
         path.reverse()
         return path
-
-
-# TEMPORARY: previews the tree before the real search exists.
-# The search algorithm will replace this by calling add_child as it expands nodes.
-def build_preview_tree(graph, root):  
-    tree = SearchTree(root)  
-    queue = deque([root])  
-    while queue:  
-        current = queue.popleft()  
-        for neighbor in graph.neighbors(current):  
-            if not tree.contains(neighbor):  
-                tree.add_child(current, neighbor)  
-                queue.append(neighbor)  
-    return tree  

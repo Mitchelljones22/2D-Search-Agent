@@ -1,7 +1,7 @@
 """Human readable results for a SearchStep, shared by the grid header and the tree view."""
 import pygame
 
-from search import SearchStatus
+from search.algorithms import SearchStatus
 
 HEADER_HEIGHT = 70   #space reserved above the grid for the result text
 FOUND_COLOR = (60, 200, 90)

@@ -1,4 +1,4 @@
-from tile_type import TileType
+from environment.tile_type import TileType
 
 # North, South, East, West as (col offset, row offset)
 DIRECTIONS = [(0, -1), (0, 1), (1, 0), (-1, 0)]  

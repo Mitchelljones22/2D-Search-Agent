@@ -1,6 +1,6 @@
 import random
 
-from tile_type import TileType
+from environment.tile_type import TileType
 
 BITS_PER_TILE = 2  
 _TILE_TYPES = {tile_type.value: tile_type for tile_type in TileType}  

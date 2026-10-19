@@ -1,6 +1,6 @@
 import pygame
 
-import clipboard
+from ui import clipboard
 
 DIGITS = "0123456789"
 PADDING = 8

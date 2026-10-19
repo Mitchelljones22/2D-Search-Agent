@@ -1,33 +1,38 @@
+import warnings
+
 import pygame
 
-from tile_map import TileMap
-from sidebar import Sidebar
-from obstacle_generator import ObstacleGenerator
-from seed import random_seed, encode, decode, max_seed_digits
-from graph import Graph
-from tree import build_preview_tree
-from tree_view import TreeView
-from control_bar import ControlBar, PlayState, BAR_HEIGHT
-from agent import SearchAgent
-from search import SEARCHES
-from search_report import HEADER_HEIGHT, ResultHeader
+from environment.tile_map import TileMap
+from ui.sidebar import Sidebar
+from environment.obstacle_generator import ObstacleGenerator
+from environment.seed import random_seed, encode, decode, max_seed_digits
+from environment.graph import Graph
+from visualization.tree_view import TreeView
+from ui.control_bar import ControlBar, PlayState, BAR_HEIGHT
+from search.agent import SearchAgent
+from search.algorithms import SEARCHES
+from visualization.search_report import HEADER_HEIGHT, ResultHeader
 
 DEFAULT_COLS = 15   #15x15 is the assignment's default test case
 DEFAULT_ROWS = 15
 DEFAULT_DENSITY_PERCENT = 25  
-STEP_MS = 350   #time between agent steps while playing
+STEP_MS = 350   #time between agent steps while playing at 1x speed
 
 
 def show_seed(tile_map, sidebar):
     sidebar.set_seed(encode(tile_map))
 
 
+def show_idle_tree(tile_map, tree_view):  #tree window message while no search is running
+    if tile_map.start_tile is None or tile_map.goal_tile is None:
+        tree_view.render(None, message="Place a Start and a Goal tile")
+    else:
+        tree_view.render(None, message="Press Play to start the search")
+
+
 def rebuild_graph(tile_map, graph, tree_view):
     graph.build(tile_map)
-    if tile_map.start_tile is None:
-        tree_view.render(None)
-    else:
-        tree_view.render(build_preview_tree(graph, tile_map.start_tile))
+    show_idle_tree(tile_map, tree_view)
 
 
 def randomize(tile_map, sidebar, graph, tree_view):
@@ -47,6 +52,15 @@ def load_seed(tile_map, sidebar, graph, tree_view):
     tile_map.apply_types(tile_types)
     show_seed(tile_map, sidebar)
     rebuild_graph(tile_map, graph, tree_view)
+
+
+def layout(size, sidebar, tile_map, control_bar):  #places every panel for the current window size
+    width, height = size
+    main_width = width - sidebar.width
+    grid_height = height - BAR_HEIGHT
+    sidebar.resize(height)
+    tile_map.set_area(pygame.Rect(sidebar.width, HEADER_HEIGHT, main_width, grid_height - HEADER_HEIGHT))
+    control_bar.set_area(pygame.Rect(sidebar.width, grid_height, main_width, BAR_HEIGHT))
 
 
 def apply_control(action, state, tile_map, graph, agent, sidebar):  #returns the next PlayState
@@ -70,7 +84,12 @@ def apply_control(action, state, tile_map, graph, agent, sidebar):  #returns the
 
 pygame.init()
 
-screen = pygame.display.set_mode((800, 600))
+WINDOW_SIZE = (800, 600)
+MIN_WINDOW_SIZE = (680, Sidebar.MIN_HEIGHT)   #wide enough for the speed buttons left of the playback controls
+screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
+with warnings.catch_warnings():   #the warning is about drawing through this Window, we only set its minimum size
+    warnings.simplefilter("ignore", DeprecationWarning)
+    pygame.Window.from_display_module().minimum_size = MIN_WINDOW_SIZE
 
 pygame.display.set_caption("2D Search Agent")
 
@@ -82,18 +101,21 @@ graph = Graph()
 tree_view = TreeView(700, 500)
 max_digits = max_seed_digits(Sidebar.MAX_GRID_SIZE, Sidebar.MAX_GRID_SIZE)  
 sidebar = Sidebar(200, screen.get_height(), max_digits, DEFAULT_COLS, DEFAULT_ROWS, DEFAULT_DENSITY_PERCENT)  
-main_width = screen.get_width() - sidebar.width
-grid_height = screen.get_height() - BAR_HEIGHT
-tile_map.set_area(pygame.Rect(sidebar.width, HEADER_HEIGHT, main_width, grid_height - HEADER_HEIGHT))
 result_header = ResultHeader()
-control_bar = ControlBar(pygame.Rect(sidebar.width, grid_height, main_width, BAR_HEIGHT))
+control_bar = ControlBar(pygame.Rect(0, 0, 0, 0))
+layout_size = None   #window size the layout was last built for
 play_state = PlayState.IDLE
 agent = SearchAgent()
 step_timer = 0
-tree_shown = None   #agent step index the tree window is showing, None for the preview
+tree_shown = None   #agent step index the tree window is showing, None when idle
 randomize(tile_map, sidebar, graph, tree_view)
 
 while running:
+    screen = pygame.display.get_surface()   #replaced by pygame when the window is resized
+    if screen.get_size() != layout_size:
+        layout_size = screen.get_size()
+        layout(layout_size, sidebar, tile_map, control_bar)
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -119,8 +141,9 @@ while running:
     elapsed = clock.tick(60)
     if play_state == PlayState.PLAYING:
         step_timer += elapsed
-        if step_timer >= STEP_MS:
-            step_timer = 0
+        step_interval = STEP_MS / control_bar.speed
+        if step_timer >= step_interval:
+            step_timer = min(step_timer - step_interval, step_interval)   #keep leftover time so steps stay evenly paced
             agent.step_forward()
         if agent.at_end:   #search is over, pause so the user can step back through it
             play_state = PlayState.PAUSED
@@ -133,7 +156,7 @@ while running:
         if agent.active:
             tree_view.render(agent.current_step.tree, agent.current_step, agent.search_name)
         else:
-            rebuild_graph(tile_map, graph, tree_view)
+            show_idle_tree(tile_map, tree_view)
 
     screen.fill((30, 30, 30))
     tile_map.draw(screen, agent.current_step)
