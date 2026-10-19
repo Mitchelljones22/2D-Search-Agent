@@ -9,6 +9,7 @@ from tile_type import TileType
 class Sidebar:
     ACTION_NEW_SEED = "new_seed"
     ACTION_GENERATE = "generate"
+    MIN_GRID_SIZE = 2   #smallest grid that fits both a Start and a Goal
     MAX_GRID_SIZE = 30  
     MAX_DENSITY_PERCENT = 100  
 
@@ -32,12 +33,19 @@ class Sidebar:
         half_width = (content_width - gap) // 2  
         self.size_label_pos = (20, 258)  
         self.density_label_pos = (20, 338)  
-        self.cols_box = TextBox((20, 280, half_width, 40), self.seed_font, 2, 0, self.MAX_GRID_SIZE)  
-        self.rows_box = TextBox((20 + half_width + gap, 280, half_width, 40), self.seed_font, 2, 0, self.MAX_GRID_SIZE)  
+        self.cols_box = TextBox((20, 280, half_width, 40), self.seed_font, 2, self.MIN_GRID_SIZE, self.MAX_GRID_SIZE)
+        self.rows_box = TextBox((20 + half_width + gap, 280, half_width, 40), self.seed_font, 2, self.MIN_GRID_SIZE, self.MAX_GRID_SIZE)
         self.density_box = TextBox((20, 360, content_width, 40), self.seed_font, 3, 0, self.MAX_DENSITY_PERCENT)  
         self.cols_box.set_value(cols)  
         self.rows_box.set_value(rows)  
         self.density_box.set_value(density_percent)  
+
+        self.search_label_pos = (20, 410)
+        self.search_name = "BFS"
+        self.search_buttons = [
+            ActionButton("BFS", (20, 428, half_width, 36)),
+            ActionButton("DFS", (20 + half_width + gap, 428, half_width, 36)),
+        ]
 
         seed_row_y = height - 120
         self.seed_box = TextBox((20, seed_row_y, box_width, 40), self.seed_font, seed_max_length)
@@ -62,6 +70,9 @@ class Sidebar:
     def get_density(self): #returns 0.0 to 1.0
         return self.density_box.get_value() / 100  
 
+    def get_search(self):  #"BFS" or "DFS"
+        return self.search_name
+
     def handle_event(self, event):
         self.cols_box.handle_event(event)  
         self.rows_box.handle_event(event)  
@@ -73,6 +84,9 @@ class Sidebar:
             return self.ACTION_NEW_SEED
         if self.generate_button.is_clicked(event.pos):
             return self.ACTION_GENERATE
+        for search_button in self.search_buttons:
+            if search_button.is_clicked(event.pos):
+                self.search_name = search_button.label
         for button in self.buttons:
             if button.is_clicked(event.pos):
                 if self.selected_button == button.tile_type:
@@ -97,6 +111,9 @@ class Sidebar:
         self.rows_box.draw(surface)  
         self._draw_label(surface, "Obstacle Density (%)", self.density_label_pos)  
         self.density_box.draw(surface)  
+        self._draw_label(surface, "Search", self.search_label_pos)
+        for search_button in self.search_buttons:
+            search_button.draw(surface, self.font, search_button.label == self.search_name)
         self.seed_box.draw(surface)
         self.generate_button.draw(surface, self.seed_font)
         self.new_seed_button.draw(surface, self.font)

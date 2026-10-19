@@ -2,6 +2,8 @@ import pygame
 
 from tile import Tile
 from tile_type import TileType  
+from search import SearchStatus
+from step_colors import AGENT_COLOR, tile_color
 
 PADDING = 20  
 MAX_TILE_SIZE = 40  
@@ -75,6 +77,10 @@ class TileMap:
             size = 1  
         self.tile_size = size  
 
+    def get_rect(self, surface):  #screen rect covered by the grid
+        start_x, start_y = self.get_origin(surface)
+        return pygame.Rect(start_x, start_y, self.x * self.tile_size, self.y * self.tile_size)
+
     def get_origin(self, surface):
         area = self.area  
         if area is None:  
@@ -96,7 +102,7 @@ class TileMap:
         row = (event.pos[1] - start_y) // self.tile_size
         return self.set_tile_type(col, row, selected_type)  
 
-    def draw(self, surface):
+    def draw(self, surface, step=None):   #step is the agent's current SearchStep, or None when idle
         start_x, start_y = self.get_origin(surface)  
 
         for grid_row in self.grid:
@@ -107,8 +113,10 @@ class TileMap:
                     self.tile_size,
                     self.tile_size,
                 )
-                pygame.draw.rect(surface, tile.color, rect)
+                pygame.draw.rect(surface, tile_color(tile, step), rect)
                 pygame.draw.rect(surface, (120, 120, 120), rect, 1)  
+                if step is not None and tile is step.current and step.status == SearchStatus.FOUND:
+                    pygame.draw.rect(surface, AGENT_COLOR, rect, 3)   #agent standing on the Goal
 
     def apply_types(self, tile_types):  
         index = 0  

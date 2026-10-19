@@ -8,10 +8,14 @@ from graph import Graph
 from tree import build_preview_tree
 from tree_view import TreeView
 from control_bar import ControlBar, PlayState, BAR_HEIGHT
+from agent import SearchAgent
+from search import SEARCHES
+from search_report import HEADER_HEIGHT, ResultHeader
 
-DEFAULT_COLS = 10  
-DEFAULT_ROWS = 8  
+DEFAULT_COLS = 15   #15x15 is the assignment's default test case
+DEFAULT_ROWS = 15
 DEFAULT_DENSITY_PERCENT = 25  
+STEP_MS = 350   #time between agent steps while playing
 
 
 def show_seed(tile_map, sidebar):
@@ -45,16 +49,22 @@ def load_seed(tile_map, sidebar, graph, tree_view):
     rebuild_graph(tile_map, graph, tree_view)
 
 
-def apply_control(action, state, tile_map):  #returns the next PlayState
+def apply_control(action, state, tile_map, graph, agent, sidebar):  #returns the next PlayState
     if action == ControlBar.ACTION_PLAY:
-        if tile_map.start_tile is None or tile_map.goal_tile is None:
-            return state   #a search needs both a Start and a Goal
+        if state == PlayState.IDLE:
+            if tile_map.start_tile is None or tile_map.goal_tile is None:
+                return state   #a search needs both a Start and a Goal
+            agent.start(graph, tile_map.start_tile, tile_map.goal_tile, SEARCHES[sidebar.get_search()])
         return PlayState.PLAYING
     if action == ControlBar.ACTION_PAUSE:
         return PlayState.PAUSED
     if action == ControlBar.ACTION_STOP:
+        agent.reset()
         return PlayState.IDLE
-    # ACTION_STEP_BACK / ACTION_STEP_FORWARD get hooked up once the search exists
+    if action == ControlBar.ACTION_STEP_FORWARD:
+        agent.step_forward()
+    elif action == ControlBar.ACTION_STEP_BACK:
+        agent.step_back()
     return state
 
 
@@ -62,7 +72,7 @@ pygame.init()
 
 screen = pygame.display.set_mode((800, 600))
 
-pygame.display.set_caption("Program 1")
+pygame.display.set_caption("2D Search Agent")
 
 clock = pygame.time.Clock()
 running = True
@@ -74,9 +84,13 @@ max_digits = max_seed_digits(Sidebar.MAX_GRID_SIZE, Sidebar.MAX_GRID_SIZE)
 sidebar = Sidebar(200, screen.get_height(), max_digits, DEFAULT_COLS, DEFAULT_ROWS, DEFAULT_DENSITY_PERCENT)  
 main_width = screen.get_width() - sidebar.width
 grid_height = screen.get_height() - BAR_HEIGHT
-tile_map.set_area(pygame.Rect(sidebar.width, 0, main_width, grid_height))
+tile_map.set_area(pygame.Rect(sidebar.width, HEADER_HEIGHT, main_width, grid_height - HEADER_HEIGHT))
+result_header = ResultHeader()
 control_bar = ControlBar(pygame.Rect(sidebar.width, grid_height, main_width, BAR_HEIGHT))
 play_state = PlayState.IDLE
+agent = SearchAgent()
+step_timer = 0
+tree_shown = None   #agent step index the tree window is showing, None for the preview
 randomize(tile_map, sidebar, graph, tree_view)
 
 while running:
@@ -100,15 +114,33 @@ while running:
                 rebuild_graph(tile_map, graph, tree_view)
 
         control_action = control_bar.handle_event(event, play_state)
-        play_state = apply_control(control_action, play_state, tile_map)
+        play_state = apply_control(control_action, play_state, tile_map, graph, agent, sidebar)
+
+    elapsed = clock.tick(60)
+    if play_state == PlayState.PLAYING:
+        step_timer += elapsed
+        if step_timer >= STEP_MS:
+            step_timer = 0
+            agent.step_forward()
+        if agent.at_end:   #search is over, pause so the user can step back through it
+            play_state = PlayState.PAUSED
+    else:
+        step_timer = 0
+
+    shown = agent.index if agent.active else None
+    if shown != tree_shown:   #redraw the tree only when the step changes, rendering it is slow
+        tree_shown = shown
+        if agent.active:
+            tree_view.render(agent.current_step.tree, agent.current_step, agent.search_name)
+        else:
+            rebuild_graph(tile_map, graph, tree_view)
 
     screen.fill((30, 30, 30))
-    tile_map.draw(screen)
+    tile_map.draw(screen, agent.current_step)
+    result_header.draw(screen, agent.current_step, agent.search_name, tile_map.get_rect(screen))
     sidebar.draw(screen, play_state != PlayState.IDLE)
     control_bar.draw(screen, play_state)
     pygame.display.flip()
     tree_view.draw()
-
-    clock.tick(60)
 
 pygame.quit()

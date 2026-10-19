@@ -27,6 +27,14 @@ class SearchTree:
                 pairs.append((parent, child))  
         return pairs  
 
+    def path_to(self, node):   #follows parent links back to the root, returned root first
+        path = []
+        while node is not None:
+            path.append(node)
+            node = self.parent[node]
+        path.reverse()
+        return path
+
 
 # TEMPORARY: previews the tree before the real search exists.
 # The search algorithm will replace this by calling add_child as it expands nodes.

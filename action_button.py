@@ -8,9 +8,12 @@ class ActionButton:
         self.color = color
         self.text_color = text_color
 
-    def draw(self, surface, font):
+    def draw(self, surface, font, selected=False):
         pygame.draw.rect(surface, self.color, self.rect)
-        pygame.draw.rect(surface, (110, 110, 110), self.rect, 2)
+        if selected:
+            pygame.draw.rect(surface, (255, 215, 0), self.rect, 4)
+        else:
+            pygame.draw.rect(surface, (110, 110, 110), self.rect, 2)
         text = font.render(self.label, True, self.text_color)
         surface.blit(text, text.get_rect(center=self.rect.center))
 

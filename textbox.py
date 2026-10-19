@@ -62,9 +62,9 @@ class TextBox:
             value = self.max_value  
         self.text = str(value)  
 
-    def _finish(self):   #empty ranged box falls back to its minimum
-        if self.min_value is not None and self.text == "":  
-            self.text = str(self.min_value)  
+    def _finish(self):   #empty or too small ranged box falls back to its minimum
+        if self.min_value is not None:
+            self.text = str(self.get_value())
 
     def _paste(self):
         digits = ""
@@ -80,7 +80,10 @@ class TextBox:
             if self.min_value is not None:  
                 return self.min_value  
             return None
-        return int(self.text)
+        value = int(self.text)
+        if self.min_value is not None and value < self.min_value:   #enforced here, not while typing, so "15" can start with "1"
+            return self.min_value
+        return value
 
     def set_value(self, value):
         self.text = str(value)
