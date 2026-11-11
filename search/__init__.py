@@ -1,1 +1,1 @@
-"""Uninformed search: BFS/DFS algorithms, the search tree, and the agent that steps through them."""
+"""Uninformed search: the algorithms package (one module per search), the search tree, and the agent that steps through them."""
