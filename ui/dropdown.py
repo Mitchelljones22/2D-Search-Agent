@@ -9,9 +9,18 @@ class Dropdown:  #collapsed box showing the selected option, click to open a lis
         self.color = color
         self.text_color = text_color
         self.open = False
+        self.max_bottom = None   #lowest y the list may reach, it opens upward if it would pass this
 
-    def _option_rect(self, index):  #list rows sit directly under the collapsed box
-        return pygame.Rect(self.rect.x, self.rect.bottom + index * self.rect.height, self.rect.width, self.rect.height)
+    def _opens_up(self):
+        list_bottom = self.rect.bottom + len(self.options) * self.rect.height
+        return self.max_bottom is not None and list_bottom > self.max_bottom
+
+    def _option_rect(self, index):  #list rows sit directly under the collapsed box, or above it if there is no room
+        if self._opens_up():
+            top = self.rect.top - (len(self.options) - index) * self.rect.height
+        else:
+            top = self.rect.bottom + index * self.rect.height
+        return pygame.Rect(self.rect.x, top, self.rect.width, self.rect.height)
 
     def handle_event(self, event):  #returns True when the dropdown used the click, so nothing under it reacts
         if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE and self.open:
@@ -34,7 +43,7 @@ class Dropdown:  #collapsed box showing the selected option, click to open a lis
     def _draw_arrow(self, surface):
         cx = self.rect.right - 16
         cy = self.rect.centery
-        if self.open:
+        if self.open != self._opens_up():   #arrow points toward where the list is
             points = [(cx - 6, cy + 3), (cx + 6, cy + 3), (cx, cy - 4)]
         else:
             points = [(cx - 6, cy - 3), (cx + 6, cy - 3), (cx, cy + 4)]

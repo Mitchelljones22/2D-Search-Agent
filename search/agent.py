@@ -3,7 +3,7 @@
 The history lets the user step backwards and forwards through a search that has
 already happened, while new steps are only pulled from the search when needed.
 """
-from search.algorithms import SearchStatus, bfs
+from search.algorithms import SEARCHES, SearchStatus, bfs
 
 
 class SearchAgent:
@@ -37,7 +37,7 @@ class SearchAgent:
     def start(self, graph, start_tile, goal_tile, search=bfs):
         self.reset()
         self._search = search(graph, start_tile, goal_tile)
-        self.search_name = search.__name__.upper()   #"BFS" or "DFS"
+        self.search_name = next((name for name, fn in SEARCHES.items() if fn is search), search.__name__)   #dropdown label
         self.step_forward()   #first expansion puts the agent on the Start tile
 
     def step_forward(self):

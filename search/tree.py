@@ -5,10 +5,13 @@ class SearchTree:  #inverted tree rooted at Start, grown by the search through a
         self.children = {root: []}  
         self.depth = {root: 0}  
 
-    def add_child(self, parent, child):  
+    def add_child(self, parent, child):  #a child already in the tree is moved under the new parent (IDDFS found a shorter route)
+        if child in self.parent:
+            self.children[self.parent[child]].remove(child)
+        else:
+            self.children[child] = []
         self.parent[child] = parent  
         self.children[parent].append(child)  
-        self.children[child] = []  
         self.depth[child] = self.depth[parent] + 1  
 
     def contains(self, node):  

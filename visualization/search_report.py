@@ -29,13 +29,17 @@ def stats_line(step, search_name):  #one line summary shown above the grid
     if step.status == SearchStatus.FOUND:
         parts.append(f"Path: {path_text(step)}")
     parts.append(f"States searched: {step.expanded}")
+    if step.depth_limit is not None:
+        parts.append(f"Depth limit: {step.depth_limit}")
+    if step.heuristic_value is not None:
+        parts.append(f"h: {step.heuristic_value}")
     if step.status == SearchStatus.RUNNING:
         parts.append(f"Frontier: {len(step.frontier)}")
     return "   |   ".join(parts)
 
 
 def stats_list(step, search_name):  #one fact per line, shown in the tree window
-    return [
+    lines = [
         f"Search: {search_name}",
         f"Status: {STATUS_TEXT[step.status]}",
         f"States searched: {step.expanded}",
@@ -43,6 +47,11 @@ def stats_list(step, search_name):  #one fact per line, shown in the tree window
         f"Tree nodes: {step.tree_size}",
         f"Path length: {path_text(step)}",
     ]
+    if step.depth_limit is not None:
+        lines.insert(2, f"Depth limit: {step.depth_limit}")
+    if step.heuristic_value is not None:
+        lines.insert(2, f"Heuristic: Manhattan, h = {step.heuristic_value}")
+    return lines
 
 
 class ResultHeader:  #result message and stats centered above the grid

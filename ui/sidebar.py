@@ -56,6 +56,7 @@ class Sidebar:
         self.seed_box.rect.y = self.height - 120
         self.generate_button.rect.y = self.height - 120
         self.new_seed_button.rect.y = self.height - 60
+        self.search_dropdown.max_bottom = self.height
         self.lock_overlay = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
         self.lock_overlay.fill((30, 30, 30, 170))
 

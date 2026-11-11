@@ -12,5 +12,7 @@ shared step types so callers can keep importing from search.algorithms.
 from search.algorithms.search_step import SearchStatus, SearchStep
 from search.algorithms.bfs import bfs
 from search.algorithms.dfs import dfs
+from search.algorithms.iddfs import iddfs
+from search.algorithms.best_first import best_first
 
-SEARCHES = {"BFS": bfs, "DFS": dfs}   #display name -> search generator, in dropdown order
+SEARCHES = {"BFS": bfs, "DFS": dfs, "IDDFS": iddfs, "Best-First": best_first}   #display name -> search generator, in dropdown order

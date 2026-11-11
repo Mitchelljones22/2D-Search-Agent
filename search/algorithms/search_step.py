@@ -24,18 +24,23 @@ class SearchStep:  #snapshot of the search after one expansion
     path: tuple = ()     #start to goal, filled in once found
     frontier_set: frozenset = frozenset()   #fast membership tests for drawing
     path_set: frozenset = frozenset()
+    expansions: int = None   #total expansions including repeats, set by searches that re-expand (IDDFS)
+    depth_limit: int = None  #current depth limit, only for depth-limited searches
+    heuristic_value: int = None   #h(current), only for informed searches
 
     @property
     def expanded(self):  #number of states searched so far
+        if self.expansions is not None:
+            return self.expansions
         return len(self.visited)
 
 
-def snapshot(current, frontier, visited, tree, status, goal=None):
+def snapshot(current, frontier, visited, tree, status, goal=None, expansions=None, depth_limit=None, heuristic_value=None):
     path = ()
     if status == SearchStatus.FOUND:
         path = tuple(tree.path_to(goal))
     frontier = tuple(frontier)
     return SearchStep(
         current, frontier, frozenset(visited), tree, len(tree.parent), status, path,
-        frozenset(frontier), frozenset(path),
+        frozenset(frontier), frozenset(path), expansions, depth_limit, heuristic_value,
     )
