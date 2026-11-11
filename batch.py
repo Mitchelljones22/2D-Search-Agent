@@ -27,6 +27,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="Run every search method on a set of maps and compare them.")
     parser.add_argument("script", nargs="?", help="test script (JSON); omit when using --map-seed")
     parser.add_argument("--map-seed", help="run one map given by its seed from the app instead of a script")
+    parser.add_argument("--map-file", help="like --map-seed, but the seed is read from this file (large maps)")
     parser.add_argument("--movement", action="append", choices=list(protocol_module.MOVEMENTS),
                         help="with --map-seed: movement mode(s), default both")
     parser.add_argument("--repeats", type=int, help="override the script's repeats")
@@ -36,6 +37,9 @@ def main(argv=None):
         sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
 
     try:
+        if args.map_file:
+            with open(args.map_file, encoding="utf-8") as file:
+                args.map_seed = file.read().strip()
         if args.map_seed:
             protocol = protocol_module.validate({
                 "name": "current_map",

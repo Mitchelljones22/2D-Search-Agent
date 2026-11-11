@@ -26,7 +26,9 @@ class BatchJob:
         if script is not None:
             command.append(str(script))
         else:
-            command += ["--map-seed", str(map_seed)]
+            seed_file = self.out_dir / "map_seed.txt"   #a 1000 x 1000 seed is far over the command line length limit
+            seed_file.write_text(str(map_seed), encoding="utf-8")
+            command += ["--map-file", str(seed_file)]
             for movement in movements or []:
                 command += ["--movement", movement]
         command += ["--out", str(self.out_dir)]

@@ -11,6 +11,7 @@ DPI = 100
 CURRENT_OUTLINE = (170, 120, 0)   #dark gold ring marks the agent's node
 MIN_SIZE = (300, 200)
 STRIP_HEIGHT = 130   #pixels for the frontier chart under the tree
+TREE_DRAW_LIMIT = 1500   #larger trees are not drawn, only their statistics
 
 
 def _rgb(color):  #pygame 0-255 color to matplotlib 0-1 color
@@ -74,7 +75,13 @@ class TreeView:
         if tree is None:
             axes.text(0.5, 0.5, message, ha="center", va="center", fontsize=12, color="#555555")
         else:
-            self._draw_tree(axes, tree, step)
+            nodes = step.tree_size if step is not None else len(tree.parent)
+            if nodes <= TREE_DRAW_LIMIT:
+                self._draw_tree(axes, tree, step)
+            else:   #laying out and drawing this many nodes would take seconds per step
+                axes.text(0.5, 0.42, f"Search tree has {nodes:,} nodes,\ntoo many to draw.\n"
+                          f"Statistics and the frontier chart are still shown.",
+                          ha="center", va="center", fontsize=12, color="#555555")
             if step is not None:
                 self._draw_stats(axes, step, search_name, measurement)
             if show_chart:

@@ -92,7 +92,7 @@ class TextBox:
     def draw(self, surface):
         pygame.draw.rect(surface, (255, 255, 255), self.rect)
 
-        display = self.text
+        display = self.text[-200:]   #only the end is ever visible; seeds can be 600,000 digits
         while display and self.font.size(display)[0] > self.rect.width - 2 * PADDING:
             display = display[1:]
         text = self.font.render(display, True, (0, 0, 0))

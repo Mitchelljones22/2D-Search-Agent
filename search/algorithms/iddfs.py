@@ -17,6 +17,10 @@ import sys
 
 from search.algorithms.search_step import SearchStatus, snapshot
 from search.metrics import SearchMetrics
+
+# Each level of DLS is a nested generator frame; very deep nesting can crash the interpreter
+# (tested safe to 50,000). Paths longer than this are reported as No Path.
+MAX_RECURSION_DEPTH = 20000
 from search.tree import SearchTree
 
 
@@ -83,6 +87,7 @@ class _IterativeDeepening:
         return False
 
     def IDDFS(self, maxDepth):  #repeatedly depth-limit search till the maximum depth
+        maxDepth = min(maxDepth, MAX_RECURSION_DEPTH)
         sys.setrecursionlimit(max(sys.getrecursionlimit(), maxDepth + 500))   #one Python frame per tile on the branch
         for i in range(maxDepth):
             self.limit = i

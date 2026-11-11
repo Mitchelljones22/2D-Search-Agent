@@ -27,7 +27,7 @@ from search.algorithms import SEARCHES, SearchStatus, bfs
 from search.heuristics import HEURISTICS
 
 MIN_SIZE = 2
-MAX_SIZE = 30
+MAX_SIZE = 1000
 MOVEMENTS = {"4-dir": False, "8-dir": True}
 PLACEMENTS = ("corners", "random")
 MAX_ATTEMPTS = 100

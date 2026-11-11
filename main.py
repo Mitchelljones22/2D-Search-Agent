@@ -20,6 +20,8 @@ DEFAULT_COLS = 15   #15x15 is the assignment's default test case
 DEFAULT_ROWS = 15
 DEFAULT_DENSITY_PERCENT = 25  
 STEP_MS = 350   #time between agent steps while playing at 1x speed
+MAX_STEPS_PER_FRAME = 10   #catch-up limit, so one slow frame cannot skip far ahead
+TREE_REDRAW_MS = 125   #while playing, the tree window redraws at most this often (it is slow to render)
 
 
 def show_seed(tile_map, sidebar):
@@ -107,7 +109,7 @@ def apply_control(action, state, tile_map, graph, agent, sidebar, settings_dialo
 pygame.init()
 
 WINDOW_SIZE = (800, Sidebar.MIN_HEIGHT)
-MIN_WINDOW_SIZE = (680, Sidebar.MIN_HEIGHT)   #wide enough for the speed buttons left of the playback controls
+MIN_WINDOW_SIZE = (740, Sidebar.MIN_HEIGHT)   #wide enough for the speed buttons left of the playback controls
 screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
 with warnings.catch_warnings():   #the warning is about drawing through this Window, we only set its minimum size
     warnings.simplefilter("ignore", DeprecationWarning)
@@ -131,6 +133,7 @@ play_state = PlayState.IDLE
 agent = SearchAgent()
 step_timer = 0
 tree_shown = None   #agent step index the tree window is showing, None when idle
+tree_drawn_at = 0   #pygame ticks of the last tree redraw
 measure_pending = False   #a finished search is shown with "Measuring..." for one frame, then measured
 batch_job = None          #running batch comparison (separate process), None otherwise
 batch_message = None      #why the last batch could not start or failed
@@ -204,9 +207,12 @@ while running:
     if play_state == PlayState.PLAYING:
         step_timer += elapsed
         step_interval = STEP_MS / control_bar.speed
-        if step_timer >= step_interval:
-            step_timer = min(step_timer - step_interval, step_interval)   #keep leftover time so steps stay evenly paced
+        steps = 0
+        while step_timer >= step_interval and steps < MAX_STEPS_PER_FRAME and not agent.at_end:
+            step_timer -= step_interval   #catch up on steps owed during a slow frame (e.g. a tree redraw)
             agent.step_forward()
+            steps += 1
+        step_timer = min(step_timer, step_interval)   #a long stall does not turn into a burst later
         if agent.at_end:   #search is over, pause so the user can step back through it
             play_state = PlayState.PAUSED
     else:
@@ -223,8 +229,11 @@ while running:
         measure_pending = False
 
     shown = agent.index if agent.active else None
-    if shown != tree_shown:   #redraw the tree only when the step changes, rendering it is slow
+    throttled = (play_state == PlayState.PLAYING and shown is not None and tree_shown is not None
+                 and not agent.at_end and pygame.time.get_ticks() - tree_drawn_at < TREE_REDRAW_MS)
+    if shown != tree_shown and not throttled:   #redraw the tree only when the step changes, rendering it is slow
         tree_shown = shown
+        tree_drawn_at = pygame.time.get_ticks()
         if agent.active:
             tree_view.render(agent.current_step.tree, agent.current_step, agent.search_name,
                              history=agent.history, index=agent.index, measurement=agent.measurement)

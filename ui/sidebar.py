@@ -19,7 +19,7 @@ class Sidebar:
     MODE_BATCH = "Batch"     #every method, measured in a background process, results window
     CURRENT_MAP = "Current map"   #batch source: the map on screen instead of a test script
     MIN_GRID_SIZE = 2   #smallest grid that fits both a Start and a Goal
-    MAX_GRID_SIZE = 30
+    MAX_GRID_SIZE = 1000   #seeds store up to 1023 per side
     MAX_DENSITY_PERCENT = 100
     MIN_HEIGHT = 680   #seed row is pinned to the bottom, this keeps it below the Search Settings button
 
@@ -43,8 +43,8 @@ class Sidebar:
         half_width = (content_width - gap) // 2  
         self.size_label_pos = (20, 258)  
         self.density_label_pos = (20, 338)  
-        self.cols_box = TextBox((20, 280, half_width, 40), self.seed_font, 2, self.MIN_GRID_SIZE, self.MAX_GRID_SIZE)
-        self.rows_box = TextBox((20 + half_width + gap, 280, half_width, 40), self.seed_font, 2, self.MIN_GRID_SIZE, self.MAX_GRID_SIZE)
+        self.cols_box = TextBox((20, 280, half_width, 40), self.seed_font, len(str(self.MAX_GRID_SIZE)), self.MIN_GRID_SIZE, self.MAX_GRID_SIZE)
+        self.rows_box = TextBox((20 + half_width + gap, 280, half_width, 40), self.seed_font, len(str(self.MAX_GRID_SIZE)), self.MIN_GRID_SIZE, self.MAX_GRID_SIZE)
         self.density_box = TextBox((20, 360, content_width, 40), self.seed_font, 3, 0, self.MAX_DENSITY_PERCENT)  
         self.cols_box.set_value(cols)  
         self.rows_box.set_value(rows)  
