@@ -13,6 +13,8 @@ from ui.control_bar import ControlBar, PlayState, BAR_HEIGHT
 from search.agent import SearchAgent
 from search.algorithms import SEARCHES
 from visualization.search_report import HEADER_HEIGHT, ResultHeader
+from visualization.results_window import ResultsWindow, draw_progress
+from evaluation.batch_job import BatchJob
 
 DEFAULT_COLS = 15   #15x15 is the assignment's default test case
 DEFAULT_ROWS = 15
@@ -66,6 +68,22 @@ def layout(size, sidebar, tile_map, control_bar, settings_dialog):  #places ever
     control_bar.set_area(pygame.Rect(sidebar.width, grid_height, main_width, BAR_HEIGHT))
 
 
+def start_batch(tile_map, graph, sidebar):  #returns (BatchJob, None) or (None, error message)
+    source = sidebar.get_batch_source()
+    if source == Sidebar.CURRENT_MAP:   #every method and heuristic on the map on screen, current movement mode
+        if tile_map.start_tile is None or tile_map.goal_tile is None:
+            return None, "Place a Start and a Goal tile to batch the current map"
+        movement = "8-dir" if graph.diagonal else "4-dir"
+        return BatchJob("current_map", map_seed=encode(tile_map), movements=[movement]), None
+    return BatchJob(source.stem, script=source), None
+
+
+def draw_message(surface, text, area):  #one line of red text above the grid
+    font = pygame.font.Font(None, 24)
+    image = font.render(text, True, (235, 90, 90))
+    surface.blit(image, image.get_rect(center=(area.centerx, area.top - 14)))
+
+
 def apply_control(action, state, tile_map, graph, agent, sidebar, settings_dialog):  #returns the next PlayState
     if action == ControlBar.ACTION_PLAY:
         if state == PlayState.IDLE:
@@ -113,6 +131,10 @@ play_state = PlayState.IDLE
 agent = SearchAgent()
 step_timer = 0
 tree_shown = None   #agent step index the tree window is showing, None when idle
+measure_pending = False   #a finished search is shown with "Measuring..." for one frame, then measured
+batch_job = None          #running batch comparison (separate process), None otherwise
+batch_message = None      #why the last batch could not start or failed
+results_window = None     #window showing the last batch's results
 randomize(tile_map, sidebar, graph, tree_view)
 
 while running:
@@ -126,6 +148,9 @@ while running:
             running = False
 
         if getattr(event, "window", None) is tree_view.window:
+            continue
+        if results_window is not None and getattr(event, "window", None) is results_window.window:
+            results_window.handle_event(event)
             continue
 
         if settings_dialog.open:   #modal, nothing else reacts until it closes
@@ -150,7 +175,30 @@ while running:
                 rebuild_graph(tile_map, graph, tree_view)
 
         control_action = control_bar.handle_event(event, play_state)
+        if batch_job is not None:   #a batch is running, only Stop (cancel) does anything
+            if control_action == ControlBar.ACTION_STOP:
+                batch_job.cancel()
+            continue
+        if control_action == ControlBar.ACTION_PLAY and play_state == PlayState.IDLE and sidebar.mode == Sidebar.MODE_BATCH:
+            batch_job, batch_message = start_batch(tile_map, graph, sidebar)
+            if batch_job is not None:
+                play_state = PlayState.PLAYING
+            continue
+        if control_action == ControlBar.ACTION_PLAY:
+            batch_message = None
         play_state = apply_control(control_action, play_state, tile_map, graph, agent, sidebar, settings_dialog)
+
+    if batch_job is not None and not batch_job.running:   #batch finished, cancelled, or failed
+        results, batch_message = batch_job.outcome()
+        if results is not None:
+            if results_window is not None:
+                results_window.destroy()
+            results_window = ResultsWindow(results, batch_job.result_dir)
+        batch_job = None
+        play_state = PlayState.IDLE
+    if results_window is not None and results_window.closed:
+        results_window.destroy()
+        results_window = None
 
     elapsed = clock.tick(60)
     if play_state == PlayState.PLAYING:
@@ -164,22 +212,41 @@ while running:
     else:
         step_timer = 0
 
+    if agent.finished and agent.measurement is None:   #rerun the finished search headless to measure it
+        if measure_pending:   #"Measuring..." has been drawn, now do the blocking work
+            agent.measure()
+            measure_pending = False
+            tree_shown = None   #redraw the tree window stats with the measured metrics
+        else:
+            measure_pending = True
+    else:
+        measure_pending = False
+
     shown = agent.index if agent.active else None
     if shown != tree_shown:   #redraw the tree only when the step changes, rendering it is slow
         tree_shown = shown
         if agent.active:
-            tree_view.render(agent.current_step.tree, agent.current_step, agent.search_name)
+            tree_view.render(agent.current_step.tree, agent.current_step, agent.search_name,
+                             history=agent.history, index=agent.index, measurement=agent.measurement)
         else:
             show_idle_tree(tile_map, tree_view)
 
     screen.fill((30, 30, 30))
     tile_map.draw(screen, agent.current_step)
     result_header.draw(screen, agent.current_step, agent.search_name, tile_map.get_rect(screen),
-                       screen.get_width() - sidebar.width - 20)
+                       screen.get_width() - sidebar.width - 20, agent.measurement, measure_pending)
+    if batch_message and agent.current_step is None:
+        draw_message(screen, batch_message, tile_map.get_rect(screen))
     sidebar.draw(screen, play_state != PlayState.IDLE)
     control_bar.draw(screen, play_state)
+    if batch_job is not None:
+        draw_progress(screen, tile_map.get_rect(screen), batch_job)
     settings_dialog.draw(screen)
     pygame.display.flip()
     tree_view.draw()
+    if results_window is not None:
+        results_window.draw()
 
+if batch_job is not None:   #closing the app stops a running batch
+    batch_job.kill()
 pygame.quit()

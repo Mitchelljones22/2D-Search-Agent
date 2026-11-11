@@ -16,15 +16,19 @@ with this program:
 import sys
 
 from search.algorithms.search_step import SearchStatus, snapshot
+from search.metrics import SearchMetrics
 from search.tree import SearchTree
 
 
 class _IterativeDeepening:
-    def __init__(self, graph, src, target):
+    def __init__(self, graph, src, target, metrics, trace):
         self.graph = graph
         self.src = src
         self.target = target
+        self.metrics = metrics
+        self.trace = trace   #False: only the final step is yielded
         self.expansions = 0   #every DLS call that enters a node, across all rounds
+        self.pending_count = 0   #neighbors waiting across all recursion levels (the frontier)
 
     def _snapshot(self, current, status):
         return snapshot(current, self._frontier(), self.visited, self.tree, status, self.target,
@@ -50,6 +54,7 @@ class _IterativeDeepening:
             self.tree.add_child(parent, src)   #moves the tile if it was reached by a longer route earlier
 
         if src is self.target:
+            self.metrics.visit_leaf(self.pending_count, len(self.depth_left))
             yield self._snapshot(src, SearchStatus.FOUND)
             return True
 
@@ -57,15 +62,21 @@ class _IterativeDeepening:
         if maxDepth <= 0:
             if self.graph.neighbors(src):
                 self.cutoff = True   #there is more to see past the limit
-            yield self._snapshot(src, SearchStatus.RUNNING)
+            self.metrics.visit_leaf(self.pending_count, len(self.depth_left))
+            if self.trace:
+                yield self._snapshot(src, SearchStatus.RUNNING)
             return False
 
         # Recur for all the tiles adjacent to this tile
-        level = list(self.graph.neighbors(src))   #North, South, East, West
+        level = list(self.graph.neighbors(src))   #N, S, E, W, then the diagonals if allowed
         self.pending.append(level)
-        yield self._snapshot(src, SearchStatus.RUNNING)
+        self.pending_count += len(level)
+        self.metrics.expand(len(level), len(level), self.pending_count, len(self.depth_left))
+        if self.trace:
+            yield self._snapshot(src, SearchStatus.RUNNING)
         while level:
             i = level.pop(0)
+            self.pending_count -= 1
             if (yield from self.DLS(i, src, maxDepth - 1)):
                 return True
         self.pending.pop()
@@ -79,6 +90,7 @@ class _IterativeDeepening:
             self.depth_left = {}
             self.visited = set()
             self.pending = []
+            self.pending_count = 0
             self.cutoff = False
             if (yield from self.DLS(self.src, None, i)):
                 return True
@@ -88,11 +100,14 @@ class _IterativeDeepening:
         return False
 
 
-def iddfs(graph, start, goal):
+def iddfs(graph, start, goal, metrics=None, trace=True):
     """Iterative Deepening DFS: depth-limited DFS with limit 0, 1, 2, ... until the goal is found.
 
     Keeps DFS's small memory (one branch at a time) but finds the shortest path like BFS,
     at the cost of redoing the shallower levels every round.
+
+    metrics collects search effort; trace=False yields only the final step.
     """
-    search = _IterativeDeepening(graph, start, goal)
+    metrics = metrics if metrics is not None else SearchMetrics()
+    search = _IterativeDeepening(graph, start, goal, metrics, trace)
     yield from search.IDDFS(max(graph.node_count(), 1))

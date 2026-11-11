@@ -1,0 +1,13 @@
+{
+  "name": "quick",
+  "description": "Small smoke test of the batch pipeline: 2 sizes x 2 densities, both placements, both movements, 2 repeats.",
+  "base_seed": 2000,
+  "sizes": [10, 20],
+  "densities": [10, 25],
+  "maps_per_config": 1,
+  "placements": ["corners", "random"],
+  "movements": ["4-dir", "8-dir"],
+  "methods": ["BFS", "DFS", "IDDFS", "Best-First", "A*"],
+  "heuristics": ["Manhattan", "Euclidean", "Octile", "Chebyshev", "None"],
+  "repeats": 2
+}

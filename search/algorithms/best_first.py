@@ -3,10 +3,11 @@ from itertools import count
 
 from search.algorithms.search_step import SearchStatus, snapshot
 from search.heuristics import manhattan
+from search.metrics import SearchMetrics
 from search.tree import SearchTree
 
 
-def best_first(graph, start, goal, heuristic=manhattan):
+def best_first(graph, start, goal, heuristic=manhattan, metrics=None, trace=True):
     """Greedy Best-First Search: always expands the open tile estimated closest to the goal.
 
     The open list holds the frontier ordered by h(n), the heuristic estimate of the cost
@@ -23,7 +24,10 @@ def best_first(graph, start, goal, heuristic=manhattan):
     A tile is kept in the open list only once. If it is reached again by a shorter route
     while still open, its parent is switched to the shorter route (its h, and so its place
     in the open list, does not change).
+
+    metrics collects search effort; trace=False yields only the final step.
     """
+    metrics = metrics if metrics is not None else SearchMetrics()
     order = count()   #tie breaker: insertion order
     tree = SearchTree(start)
     open_heap = [(heuristic(start, goal), next(order), start)]
@@ -39,10 +43,13 @@ def best_first(graph, start, goal, heuristic=manhattan):
         _, _, current = heapq.heappop(open_heap)
         closed.add(current)
         if current is goal:
+            metrics.visit_leaf(len(open_heap), len(closed))
             yield step(SearchStatus.FOUND)
             return
 
-        for neighbor in graph.neighbors(current):   #N, S, E, W, then the diagonals if allowed
+        neighbors = graph.neighbors(current)
+        added = 0
+        for neighbor in neighbors:   #N, S, E, W, then the diagonals if allowed
             if neighbor in closed:
                 continue
             g = g_cost[current] + graph.cost(current, neighbor)
@@ -50,10 +57,13 @@ def best_first(graph, start, goal, heuristic=manhattan):
                 g_cost[neighbor] = g
                 tree.add_child(current, neighbor)
                 heapq.heappush(open_heap, (heuristic(neighbor, goal), next(order), neighbor))
+                added += 1
             elif g < g_cost[neighbor]:   #already open, keep only the lower cost route
                 g_cost[neighbor] = g
                 tree.add_child(current, neighbor)
+        metrics.expand(len(neighbors), added, len(open_heap), len(closed))
 
-        yield step(SearchStatus.RUNNING)
+        if trace:
+            yield step(SearchStatus.RUNNING)
 
     yield step(SearchStatus.NO_PATH)

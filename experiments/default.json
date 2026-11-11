@@ -1,0 +1,13 @@
+{
+  "name": "default",
+  "description": "Full protocol: depth varies with grid size (10-30), branching factor with obstacle density (8-24%) and movement (4-dir vs 8-dir). Start/Goal in opposite corners (controlled depth) and at random positions (natural variation), same obstacles for both. Every method and heuristic, 5 repeats each.",
+  "base_seed": 1000,
+  "sizes": [10, 15, 20, 25, 30],
+  "densities": [8, 16, 24],
+  "maps_per_config": 1,
+  "placements": ["corners", "random"],
+  "movements": ["4-dir", "8-dir"],
+  "methods": ["BFS", "DFS", "IDDFS", "Best-First", "A*"],
+  "heuristics": ["Manhattan", "Euclidean", "Octile", "Chebyshev", "None"],
+  "repeats": 5
+}
