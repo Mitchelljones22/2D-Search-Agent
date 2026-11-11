@@ -3,7 +3,8 @@
 The history lets the user step backwards and forwards through a search that has
 already happened, while new steps are only pulled from the search when needed.
 """
-from search.algorithms import SEARCHES, SearchStatus, bfs
+from search.algorithms import INFORMED, SEARCHES, SearchStatus, bfs
+from search.heuristics import HEURISTICS
 
 
 class SearchAgent:
@@ -34,10 +35,19 @@ class SearchAgent:
     def at_end(self):  #showing the newest step, and the search has nothing more to give
         return self.finished and self.index == len(self.history) - 1
 
-    def start(self, graph, start_tile, goal_tile, search=bfs):
+    def start(self, graph, start_tile, goal_tile, search=bfs, heuristic="Manhattan"):  #heuristic is a HEURISTICS name
         self.reset()
-        self._search = search(graph, start_tile, goal_tile)
+        details = []   #shown after the search name so runs with different settings can be told apart
+        if search in INFORMED:
+            self._search = search(graph, start_tile, goal_tile, HEURISTICS[heuristic])
+            details.append(heuristic)
+        else:
+            self._search = search(graph, start_tile, goal_tile)
+        if graph.diagonal:
+            details.append("8-dir")
         self.search_name = next((name for name, fn in SEARCHES.items() if fn is search), search.__name__)   #dropdown label
+        if details:
+            self.search_name += f" ({', '.join(details)})"
         self.step_forward()   #first expansion puts the agent on the Start tile
 
     def step_forward(self):

@@ -11,10 +11,11 @@ from search.algorithms import SEARCHES
 class Sidebar:
     ACTION_NEW_SEED = "new_seed"
     ACTION_GENERATE = "generate"
+    ACTION_SETTINGS = "settings"
     MIN_GRID_SIZE = 2   #smallest grid that fits both a Start and a Goal
     MAX_GRID_SIZE = 30  
     MAX_DENSITY_PERCENT = 100  
-    MIN_HEIGHT = 590   #seed row is pinned to the bottom, this keeps it below the Search dropdown
+    MIN_HEIGHT = 640   #seed row is pinned to the bottom, this keeps it below the Search Settings button
 
     def __init__(self, width, height, seed_max_length, cols, rows, density_percent):  
         self.width = width
@@ -45,6 +46,7 @@ class Sidebar:
 
         self.search_label_pos = (20, 410)
         self.search_dropdown = Dropdown(SEARCHES.keys(), (20, 428, content_width, 36))
+        self.settings_button = ActionButton("Search Settings", (20, 472, content_width, 36))
 
         self.seed_box = TextBox((20, 0, box_width, 40), self.seed_font, seed_max_length)
         self.generate_button = ActionButton("Generate", (20 + box_width + gap, 0, content_width - box_width - gap, 40))
@@ -69,6 +71,10 @@ class Sidebar:
     def get_grid_size(self):  
         return self.cols_box.get_value(), self.rows_box.get_value()  
 
+    def set_grid_size(self, cols, rows):
+        self.cols_box.set_value(cols)
+        self.rows_box.set_value(rows)
+
     def get_density(self): #returns 0.0 to 1.0
         return self.density_box.get_value() / 100  
 
@@ -88,6 +94,8 @@ class Sidebar:
             return self.ACTION_NEW_SEED
         if self.generate_button.is_clicked(event.pos):
             return self.ACTION_GENERATE
+        if self.settings_button.is_clicked(event.pos):
+            return self.ACTION_SETTINGS
         for button in self.buttons:
             if button.is_clicked(event.pos):
                 if self.selected_button == button.tile_type:
@@ -116,6 +124,7 @@ class Sidebar:
         self.density_box.draw(surface)  
         self._draw_label(surface, "Search", self.search_label_pos)
         self.search_dropdown.draw(surface, self.font)
+        self.settings_button.draw(surface, self.seed_font)
         self.seed_box.draw(surface)
         self.generate_button.draw(surface, self.seed_font)
         self.new_seed_button.draw(surface, self.font)

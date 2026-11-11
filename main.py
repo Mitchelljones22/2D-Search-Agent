@@ -4,6 +4,7 @@ import pygame
 
 from environment.tile_map import TileMap
 from ui.sidebar import Sidebar
+from ui.settings_dialog import SettingsDialog
 from environment.obstacle_generator import ObstacleGenerator
 from environment.seed import random_seed, encode, decode, max_seed_digits
 from environment.graph import Graph
@@ -43,19 +44,21 @@ def randomize(tile_map, sidebar, graph, tree_view):
     rebuild_graph(tile_map, graph, tree_view)
 
 
-def load_seed(tile_map, sidebar, graph, tree_view):
-    cols, rows = sidebar.get_grid_size()  
-    tile_types = decode(sidebar.get_seed(), cols, rows)  
-    if tile_types is None:
+def load_seed(tile_map, sidebar, graph, tree_view):  #the seed holds the board size, the size boxes follow it
+    decoded = decode(sidebar.get_seed(), Sidebar.MIN_GRID_SIZE, Sidebar.MAX_GRID_SIZE)
+    if decoded is None:
         return
+    cols, rows, tile_types = decoded
+    sidebar.set_grid_size(cols, rows)
     tile_map.resize(cols, rows)  
     tile_map.apply_types(tile_types)
     show_seed(tile_map, sidebar)
     rebuild_graph(tile_map, graph, tree_view)
 
 
-def layout(size, sidebar, tile_map, control_bar):  #places every panel for the current window size
+def layout(size, sidebar, tile_map, control_bar, settings_dialog):  #places every panel for the current window size
     width, height = size
+    settings_dialog.set_area(pygame.Rect(0, 0, width, height))
     main_width = width - sidebar.width
     grid_height = height - BAR_HEIGHT
     sidebar.resize(height)
@@ -63,12 +66,13 @@ def layout(size, sidebar, tile_map, control_bar):  #places every panel for the c
     control_bar.set_area(pygame.Rect(sidebar.width, grid_height, main_width, BAR_HEIGHT))
 
 
-def apply_control(action, state, tile_map, graph, agent, sidebar):  #returns the next PlayState
+def apply_control(action, state, tile_map, graph, agent, sidebar, settings_dialog):  #returns the next PlayState
     if action == ControlBar.ACTION_PLAY:
         if state == PlayState.IDLE:
             if tile_map.start_tile is None or tile_map.goal_tile is None:
                 return state   #a search needs both a Start and a Goal
-            agent.start(graph, tile_map.start_tile, tile_map.goal_tile, SEARCHES[sidebar.get_search()])
+            agent.start(graph, tile_map.start_tile, tile_map.goal_tile, SEARCHES[sidebar.get_search()],
+                        settings_dialog.heuristic)
         return PlayState.PLAYING
     if action == ControlBar.ACTION_PAUSE:
         return PlayState.PAUSED
@@ -84,7 +88,7 @@ def apply_control(action, state, tile_map, graph, agent, sidebar):  #returns the
 
 pygame.init()
 
-WINDOW_SIZE = (800, 600)
+WINDOW_SIZE = (800, Sidebar.MIN_HEIGHT)
 MIN_WINDOW_SIZE = (680, Sidebar.MIN_HEIGHT)   #wide enough for the speed buttons left of the playback controls
 screen = pygame.display.set_mode(WINDOW_SIZE, pygame.RESIZABLE)
 with warnings.catch_warnings():   #the warning is about drawing through this Window, we only set its minimum size
@@ -98,6 +102,7 @@ running = True
 
 tile_map = TileMap(DEFAULT_COLS, DEFAULT_ROWS)  
 graph = Graph()
+settings_dialog = SettingsDialog(graph.diagonal)
 tree_view = TreeView(700, 500)
 max_digits = max_seed_digits(Sidebar.MAX_GRID_SIZE, Sidebar.MAX_GRID_SIZE)  
 sidebar = Sidebar(200, screen.get_height(), max_digits, DEFAULT_COLS, DEFAULT_ROWS, DEFAULT_DENSITY_PERCENT)  
@@ -114,7 +119,7 @@ while running:
     screen = pygame.display.get_surface()   #replaced by pygame when the window is resized
     if screen.get_size() != layout_size:
         layout_size = screen.get_size()
-        layout(layout_size, sidebar, tile_map, control_bar)
+        layout(layout_size, sidebar, tile_map, control_bar, settings_dialog)
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -123,12 +128,21 @@ while running:
         if getattr(event, "window", None) is tree_view.window:
             continue
 
+        if settings_dialog.open:   #modal, nothing else reacts until it closes
+            if settings_dialog.handle_event(event) and settings_dialog.diagonal != graph.diagonal:
+                graph.diagonal = settings_dialog.diagonal
+                rebuild_graph(tile_map, graph, tree_view)
+            continue
+
         if play_state == PlayState.IDLE:   #sidebar and tiles are locked while a search runs
             action = sidebar.handle_event(event)
             if action == Sidebar.ACTION_NEW_SEED:
                 randomize(tile_map, sidebar, graph, tree_view)
             elif action == Sidebar.ACTION_GENERATE:
                 load_seed(tile_map, sidebar, graph, tree_view)
+            elif action == Sidebar.ACTION_SETTINGS:
+                settings_dialog.open = True
+                continue   #the click that opened the dialog is not a tile click
 
             tile_edited = tile_map.handle_event(event, screen, sidebar.selected_button)
             if tile_edited:
@@ -136,7 +150,7 @@ while running:
                 rebuild_graph(tile_map, graph, tree_view)
 
         control_action = control_bar.handle_event(event, play_state)
-        play_state = apply_control(control_action, play_state, tile_map, graph, agent, sidebar)
+        play_state = apply_control(control_action, play_state, tile_map, graph, agent, sidebar, settings_dialog)
 
     elapsed = clock.tick(60)
     if play_state == PlayState.PLAYING:
@@ -160,9 +174,11 @@ while running:
 
     screen.fill((30, 30, 30))
     tile_map.draw(screen, agent.current_step)
-    result_header.draw(screen, agent.current_step, agent.search_name, tile_map.get_rect(screen))
+    result_header.draw(screen, agent.current_step, agent.search_name, tile_map.get_rect(screen),
+                       screen.get_width() - sidebar.width - 20)
     sidebar.draw(screen, play_state != PlayState.IDLE)
     control_bar.draw(screen, play_state)
+    settings_dialog.draw(screen)
     pygame.display.flip()
     tree_view.draw()
 

@@ -9,8 +9,8 @@ from search.tree import SearchTree
 def best_first(graph, start, goal, heuristic=manhattan):
     """Greedy Best-First Search: always expands the open tile estimated closest to the goal.
 
-    The open list holds the frontier ordered by h(n), the heuristic estimate of the moves
-    left to the goal (Manhattan distance by default). The closed list holds tiles already
+    The open list holds the frontier ordered by h(n), the heuristic estimate of the cost
+    left to the goal (Manhattan distance by default, chosen in the settings dialog). The closed list holds tiles already
     expanded. Unlike hill climbing it keeps every open tile, so when the closest-looking tile
     runs into a dead end it falls back to the next most promising one anywhere on the frontier.
 
@@ -18,7 +18,7 @@ def best_first(graph, start, goal, heuristic=manhattan):
     the path found is not guaranteed to be the shortest.
 
     Ties on h are broken by the order tiles were added to the open list (oldest first), and
-    neighbors are added North, South, East, West, so runs are repeatable.
+    neighbors are added North, South, East, West (then the diagonals), so runs are repeatable.
 
     A tile is kept in the open list only once. If it is reached again by a shorter route
     while still open, its parent is switched to the shorter route (its h, and so its place
@@ -42,10 +42,10 @@ def best_first(graph, start, goal, heuristic=manhattan):
             yield step(SearchStatus.FOUND)
             return
 
-        for neighbor in graph.neighbors(current):   #North, South, East, West
+        for neighbor in graph.neighbors(current):   #N, S, E, W, then the diagonals if allowed
             if neighbor in closed:
                 continue
-            g = g_cost[current] + 1
+            g = g_cost[current] + graph.cost(current, neighbor)
             if neighbor not in g_cost:   #new tile, goes on the open list
                 g_cost[neighbor] = g
                 tree.add_child(current, neighbor)

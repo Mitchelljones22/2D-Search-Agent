@@ -14,5 +14,7 @@ from search.algorithms.bfs import bfs
 from search.algorithms.dfs import dfs
 from search.algorithms.iddfs import iddfs
 from search.algorithms.best_first import best_first
+from search.algorithms.a_star import a_star
 
-SEARCHES = {"BFS": bfs, "DFS": dfs, "IDDFS": iddfs, "Best-First": best_first}   #display name -> search generator, in dropdown order
+SEARCHES = {"BFS": bfs, "DFS": dfs, "IDDFS": iddfs, "Best-First": best_first, "A*": a_star}   #display name -> search generator, in dropdown order
+INFORMED = {best_first, a_star}   #searches that take a heuristic
